@@ -1,0 +1,16 @@
+import { corsHeaders } from "./cors.ts";
+
+export function jsonResponse(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+export function errorResponse(message: string, status = 400) {
+  return jsonResponse({ error: message }, status);
+}
+
+export function optionsResponse() {
+  return new Response("ok", { headers: corsHeaders });
+}

@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 248 250 252;
+    --foreground: 15 23 42;
+    --card: 255 255 255;
+    --card-foreground: 15 23 42;
+    --border: 226 232 240;
+    --muted: 241 245 249;
+    --muted-foreground: 100 116 139;
+    --sidebar: 255 255 255;
+    --sidebar-border: 241 245 249;
+  }
+
+  .dark {
+    --background: 15 23 42;
+    --foreground: 226 232 240;
+    --card: 30 41 59;
+    --card-foreground: 226 232 240;
+    --border: 51 65 85;
+    --muted: 30 41 59;
+    --muted-foreground: 148 163 184;
+    --sidebar: 15 23 42;
+    --sidebar-border: 30 41 59;
+  }
+}
+
+body {
+  @apply bg-[rgb(var(--background))] text-[rgb(var(--foreground))] antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--muted-foreground) / 0.15);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--muted-foreground) / 0.3);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--muted-foreground) / 0.15) transparent;
+}
