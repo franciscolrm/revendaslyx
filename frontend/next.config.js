@@ -2,10 +2,14 @@
 const nextConfig = {
   output: 'standalone',
   async rewrites() {
+    // BACKEND_URL é lida em runtime pelo server.js do standalone.
+    // Em produção, setar via ENV no container.
+    // Fallback para localhost para desenvolvimento local.
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/:path*`,
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },

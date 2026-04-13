@@ -9,8 +9,10 @@ RUN npm ci --ignore-scripts
 
 COPY . .
 
-# Build args para variáveis em tempo de build (NEXT_PUBLIC_*)
-ARG NEXT_PUBLIC_API_URL=http://backend:3001
+# NEXT_PUBLIC_* são injetadas em build-time no JS do client.
+# Para o rewrite funcionar em runtime, o server.js lê process.env em runtime.
+# Usamos um placeholder no build e sobrescrevemos via ENV no container.
+ARG NEXT_PUBLIC_API_URL=/api
 ARG NEXT_PUBLIC_SUPABASE_URL=https://supabase-revendas.lyxai.com.br
 
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
@@ -18,7 +20,7 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 
 RUN npm run build
 
-# Garante que public/ exista para o COPY do stage 2 (Next.js não a cria se vazia)
+# Garante que public/ exista para o COPY do stage 2
 RUN mkdir -p /app/public
 
 # ── Stage 2: Production ──
