@@ -18,6 +18,9 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 
 RUN npm run build
 
+# Garante que public/ exista para o COPY do stage 2 (Next.js não a cria se vazia)
+RUN mkdir -p /app/public
+
 # ── Stage 2: Production ──
 FROM node:20-alpine
 
