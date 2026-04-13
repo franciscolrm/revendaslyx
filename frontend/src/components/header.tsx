@@ -9,6 +9,7 @@ import { useUnreadCount } from '@/hooks/use-notifications';
 import { Avatar } from '@/components/ui/avatar';
 import { CommandPalette } from '@/components/command-palette';
 import Link from 'next/link';
+import { ImportSourceSelector } from '@/components/import-source-selector';
 
 const routeTitles: Record<string, { title: string; description: string }> = {
   '/dashboard': {
@@ -42,6 +43,10 @@ const routeTitles: Record<string, { title: string; description: string }> = {
   '/agenda': {
     title: 'Agenda',
     description: 'Compromissos e eventos',
+  },
+  '/chat': {
+    title: 'WhatsApp',
+    description: 'Conversas com clientes',
   },
   '/financial': {
     title: 'Financeiro',
@@ -131,6 +136,11 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Import Source Filter */}
+          <ImportSourceSelector />
+
+          <div className="mx-1 h-5 w-px bg-[rgb(var(--border))]" />
+
           {/* Search */}
           <button
             onClick={() => setSearchOpen(true)}

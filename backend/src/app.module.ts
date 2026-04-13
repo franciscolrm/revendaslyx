@@ -19,6 +19,8 @@ import { DocumentsModule } from './documents/documents.module';
 import { TasksModule } from './tasks/tasks.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { IntegrationsModule } from './integrations/integrations.module';
+import { CarteirasModule } from './carteiras/carteiras.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     TasksModule,
     ActivitiesModule,
     NotificationsModule,
+    IntegrationsModule,
+    CarteirasModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

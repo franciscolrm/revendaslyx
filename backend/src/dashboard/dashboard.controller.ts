@@ -11,8 +11,33 @@ export class DashboardController {
 
   @Get('pipeline')
   @Permissions({ module: 'dashboard', action: 'view' })
-  getPipeline(@Query('snapshot_batch_id') snapshotBatchId?: string) {
-    return this.dashboardService.getPipeline(snapshotBatchId);
+  getPipeline(
+    @Query('snapshot_batch_id') snapshotBatchId?: string,
+    @Query('import_batch_ids') importBatchIds?: string,
+  ) {
+    const batchIds = importBatchIds ? importBatchIds.split(',').filter(Boolean) : undefined;
+    return this.dashboardService.getPipeline(snapshotBatchId, batchIds);
+  }
+
+  @Get('pipeline-detail')
+  @Permissions({ module: 'dashboard', action: 'view' })
+  getPipelineDetail(@Query('import_batch_ids') importBatchIds?: string) {
+    const batchIds = importBatchIds ? importBatchIds.split(',').filter(Boolean) : undefined;
+    return this.dashboardService.getPipelineDetail(batchIds);
+  }
+
+  @Get('full-summary')
+  @Permissions({ module: 'dashboard', action: 'view' })
+  getFullSummary(@Query('import_batch_ids') importBatchIds?: string) {
+    const batchIds = importBatchIds ? importBatchIds.split(',').filter(Boolean) : undefined;
+    return this.dashboardService.getFullSummary(batchIds);
+  }
+
+  @Get('crm-summary')
+  @Permissions({ module: 'dashboard', action: 'view' })
+  getCrmSummary(@Query('import_batch_ids') importBatchIds?: string) {
+    const batchIds = importBatchIds ? importBatchIds.split(',').filter(Boolean) : undefined;
+    return this.dashboardService.getCrmSummary(batchIds);
   }
 
   @Get('pipeline/by-branch')

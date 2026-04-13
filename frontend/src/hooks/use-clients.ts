@@ -1,7 +1,17 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import api from '@/lib/api';
 
-interface Client {
+export interface ClientSummary {
+  total: number;
+  sellers: number;
+  buyers: number;
+  active: number;
+  with_phone: number;
+  with_email: number;
+  by_source: Array<{ name: string; count: number }>;
+}
+
+export interface Client {
   id: string;
   client_type: 'seller' | 'buyer' | 'both';
   full_name: string;
@@ -22,6 +32,9 @@ interface Client {
   created_at: string;
   updated_at: string;
   contacts?: ClientContact[];
+  import_batch?: { id: string; source_name: string; created_at: string } | null;
+  process_count_seller?: number;
+  process_count_buyer?: number;
 }
 
 interface ClientContact {
@@ -39,6 +52,7 @@ interface ListClientsParams {
   search?: string;
   client_type?: string;
   status?: string;
+  import_batch_ids?: string;
 }
 
 export function useClients(params: ListClientsParams = {}) {
@@ -48,6 +62,20 @@ export function useClients(params: ListClientsParams = {}) {
       const { data } = await api.get('/clients', { params });
       return data as { data: Client[]; meta: { total: number; page: number; per_page: number; total_pages: number } };
     },
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useClientSummary(importBatchIds?: string) {
+  return useQuery({
+    queryKey: ['clients', 'summary', importBatchIds],
+    queryFn: async () => {
+      const { data } = await api.get('/clients/summary', {
+        params: importBatchIds ? { import_batch_ids: importBatchIds } : {},
+      });
+      return data as ClientSummary;
+    },
+    staleTime: 30_000,
   });
 }
 

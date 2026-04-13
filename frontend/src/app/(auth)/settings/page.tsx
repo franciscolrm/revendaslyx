@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import {
   Settings,
   Workflow,
@@ -27,13 +28,19 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import api from '@/lib/api';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FlowDiagramDrawer } from '@/components/flow-diagram';
+import {
+  useMyWhatsAppInstance,
+  useCreateWhatsAppInstance,
+  useWhatsAppQrCode,
+  useDisconnectWhatsApp,
+  useRestartWhatsApp,
+} from '@/hooks/use-whatsapp';
 
 const tabList = [
   { id: 'geral', label: 'Geral', icon: <Settings className="h-4 w-4" /> },
@@ -257,27 +264,197 @@ function CategoriasTab() {
 
 // ── Integrações Tab ─────────────────────────────────────
 
+function WhatsAppConnectionCard() {
+  const { data: instance, isLoading } = useMyWhatsAppInstance();
+  const { data: qrData, isLoading: qrLoading, refetch: refetchQr } = useWhatsAppQrCode(
+    !!instance?.configured && instance?.status !== 'connected',
+  );
+  const createInstance = useCreateWhatsAppInstance();
+  const disconnect = useDisconnectWhatsApp();
+  const restart = useRestartWhatsApp();
+
+  const isConnected = instance?.status === 'connected';
+  const isConfigured = instance?.configured;
+
+  async function handleConnect() {
+    await createInstance.mutateAsync();
+  }
+
+  if (isLoading) return <div className="h-64 animate-pulse rounded-xl bg-[rgb(var(--muted))]" />;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
+              <MessageCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="text-[15px] font-semibold text-[rgb(var(--foreground))]">WhatsApp</h3>
+              <p className="text-[12px] text-[rgb(var(--muted-foreground))]">
+                {isConnected ? `Conectado: ${instance?.phone_number}` : 'Conecte seu número para atender clientes'}
+              </p>
+            </div>
+          </div>
+          <div className={cn('flex items-center gap-2 rounded-full px-3 py-1', isConnected ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-gray-50 dark:bg-gray-800')}>
+            <div className={cn('h-2 w-2 rounded-full', isConnected ? 'bg-emerald-500' : 'bg-gray-400')} />
+            <span className={cn('text-[11px] font-medium', isConnected ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-600')}>
+              {isConnected ? 'Conectado' : isConfigured ? 'Desconectado' : 'Não configurado'}
+            </span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* CONNECTED */}
+        {isConnected && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-500/5">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20">
+                <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold text-emerald-800 dark:text-emerald-300">WhatsApp conectado</p>
+                <p className="text-[12px] text-emerald-600 dark:text-emerald-400">
+                  {instance?.phone_number ? `Número: ${instance.phone_number}` : 'Pronto para enviar e receber mensagens'}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => restart.mutate()} disabled={restart.isPending} className="rounded-lg border border-[rgb(var(--border))] px-4 py-2 text-[13px] font-medium text-[rgb(var(--foreground))] transition-colors hover:bg-[rgb(var(--muted))] disabled:opacity-50">
+                {restart.isPending ? 'Reconectando...' : 'Reconectar'}
+              </button>
+              <button onClick={() => disconnect.mutate()} disabled={disconnect.isPending} className="rounded-lg border border-red-200 px-4 py-2 text-[13px] font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-500/10 disabled:opacity-50">
+                {disconnect.isPending ? 'Desconectando...' : 'Desconectar'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* NOT CONFIGURED — One click to start */}
+        {!isConfigured && (
+          <div className="text-center py-8">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-500/10">
+              <MessageCircle className="h-10 w-10 text-emerald-500" />
+            </div>
+            <h4 className="mt-4 text-[15px] font-semibold text-[rgb(var(--foreground))]">Conectar WhatsApp</h4>
+            <p className="mt-2 text-[13px] text-[rgb(var(--muted-foreground))] max-w-sm mx-auto">
+              Clique no botão abaixo para gerar o QR Code. Depois, escaneie com seu celular.
+            </p>
+            <button
+              onClick={handleConnect}
+              disabled={createInstance.isPending}
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[14px] font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {createInstance.isPending ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : (
+                <MessageCircle className="h-5 w-5" />
+              )}
+              {createInstance.isPending ? 'Gerando...' : 'Conectar meu WhatsApp'}
+            </button>
+            {createInstance.isError && (
+              <p className="mt-3 text-[12px] text-red-500">
+                Erro ao criar instância. Verifique se a Evolution API está rodando.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* CONFIGURED BUT NOT CONNECTED — QR Code */}
+        {isConfigured && !isConnected && (
+          <div className="space-y-5">
+            <div className="flex flex-col items-center py-2">
+              <div className="relative flex h-[280px] w-[280px] items-center justify-center rounded-2xl border-2 border-dashed border-emerald-300 bg-white dark:border-emerald-700 dark:bg-gray-950">
+                {qrLoading && (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent" />
+                    <span className="text-[12px] text-[rgb(var(--muted-foreground))]">Gerando QR Code...</span>
+                  </div>
+                )}
+                {!qrLoading && qrData?.error && (
+                  <div className="flex flex-col items-center gap-2 px-6 text-center">
+                    <AlertTriangle className="h-8 w-8 text-amber-500" />
+                    <span className="text-[11px] text-[rgb(var(--muted-foreground))]">{qrData.error}</span>
+                  </div>
+                )}
+                {!qrLoading && qrData?.connected && (
+                  <div className="flex flex-col items-center gap-2">
+                    <CheckCircle2 className="h-12 w-12 text-emerald-500" />
+                    <span className="text-[13px] font-medium text-emerald-600">Conectado!</span>
+                  </div>
+                )}
+                {!qrLoading && qrData?.qr_code && !qrData?.connected && (
+                  <img
+                    src={qrData.qr_code.startsWith('data:') ? qrData.qr_code : `data:image/png;base64,${qrData.qr_code}`}
+                    alt="QR Code WhatsApp"
+                    className="h-[256px] w-[256px] rounded-xl"
+                  />
+                )}
+              </div>
+
+              <button
+                onClick={() => refetchQr()}
+                disabled={qrLoading}
+                className="mt-3 rounded-lg border border-[rgb(var(--border))] px-4 py-2 text-[12px] font-medium text-[rgb(var(--foreground))] transition-colors hover:bg-[rgb(var(--muted))] disabled:opacity-50"
+              >
+                Atualizar QR Code
+              </button>
+            </div>
+
+            {/* Instructions */}
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5 dark:border-emerald-800 dark:bg-emerald-500/5">
+              <p className="text-[13px] font-semibold text-emerald-800 dark:text-emerald-300 mb-3">Como conectar</p>
+              <div className="space-y-3">
+                {[
+                  'Abra o WhatsApp no seu celular',
+                  'Toque em Menu (⋮) ou Configurações',
+                  'Toque em "Dispositivos conectados"',
+                  'Toque em "Conectar um dispositivo"',
+                  'Aponte a câmera para o QR Code acima',
+                ].map((text, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-200 text-[11px] font-bold text-emerald-800 dark:bg-emerald-500/30 dark:text-emerald-300">
+                      {i + 1}
+                    </div>
+                    <span className="text-[13px] text-emerald-700 dark:text-emerald-300">{text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function IntegracoesTab() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {integrations.map((item) => {
-        const Icon = item.icon;
-        return (
-          <Card key={item.name} className="relative overflow-hidden">
-            <CardContent className="flex flex-col items-center p-6 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[rgb(var(--muted))]">
-                <Icon className="h-6 w-6 text-[rgb(var(--muted-foreground))]" />
-              </div>
-              <h3 className="mt-3 text-[13px] font-semibold text-[rgb(var(--foreground))]">{item.name}</h3>
-              <Badge variant="default" className="mt-2">{item.status}</Badge>
-              <p className="mt-2 text-[12px] leading-relaxed text-[rgb(var(--muted-foreground))]">{item.description}</p>
-              <div className="absolute inset-0 flex items-center justify-center bg-[rgb(var(--card))]/60 backdrop-blur-[1px]">
-                <span className="rounded-full bg-[rgb(var(--muted))] px-4 py-2 text-[13px] font-semibold text-[rgb(var(--muted-foreground))]">Em breve</span>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+    <div className="space-y-6">
+      <WhatsAppConnectionCard />
+
+      {/* Other integrations */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {integrations.filter((i) => i.name !== 'WhatsApp').map((item) => {
+          const Icon = item.icon;
+          return (
+            <Card key={item.name} className="relative overflow-hidden">
+              <CardContent className="flex flex-col items-center p-6 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[rgb(var(--muted))]">
+                  <Icon className="h-6 w-6 text-[rgb(var(--muted-foreground))]" />
+                </div>
+                <h3 className="mt-3 text-[13px] font-semibold text-[rgb(var(--foreground))]">{item.name}</h3>
+                <Badge variant="default" className="mt-2">{item.status}</Badge>
+                <p className="mt-2 text-[12px] leading-relaxed text-[rgb(var(--muted-foreground))]">{item.description}</p>
+                <div className="absolute inset-0 flex items-center justify-center bg-[rgb(var(--card))]/60 backdrop-blur-[1px]">
+                  <span className="rounded-full bg-[rgb(var(--muted))] px-4 py-2 text-[13px] font-semibold text-[rgb(var(--muted-foreground))]">Em breve</span>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }

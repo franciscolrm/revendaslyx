@@ -1,5 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import api from '@/lib/api';
+
+export interface UnitSummary {
+  total: number;
+  by_status: Record<string, number>;
+  in_stock: number;
+  with_debts: number;
+  total_value: number;
+  by_source: Array<{ name: string; count: number }>;
+}
 
 export interface Unit {
   id: string;
@@ -23,8 +32,9 @@ export interface Unit {
   notes?: string;
   created_at: string;
   enterprise?: { name: string; code: string };
-  original_client?: { full_name: string };
-  current_client?: { full_name: string };
+  original_client?: { full_name: string; phone?: string };
+  current_client?: { full_name: string; phone?: string };
+  import_batch?: { id: string; source_name: string; created_at: string } | null;
 }
 
 interface ListUnitsParams {
@@ -34,6 +44,7 @@ interface ListUnitsParams {
   enterprise_id?: string;
   status?: string;
   stock_available?: boolean;
+  import_batch_ids?: string;
 }
 
 export function useUnits(params: ListUnitsParams = {}) {
@@ -43,6 +54,20 @@ export function useUnits(params: ListUnitsParams = {}) {
       const { data } = await api.get('/units', { params });
       return data as { data: Unit[]; meta: { total: number; page: number; per_page: number; total_pages: number } };
     },
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useUnitSummary(importBatchIds?: string) {
+  return useQuery({
+    queryKey: ['units', 'summary', importBatchIds],
+    queryFn: async () => {
+      const { data } = await api.get('/units/summary', {
+        params: importBatchIds ? { import_batch_ids: importBatchIds } : {},
+      });
+      return data as UnitSummary;
+    },
+    staleTime: 30_000,
   });
 }
 

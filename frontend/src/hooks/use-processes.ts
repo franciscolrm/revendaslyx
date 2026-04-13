@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import api from '@/lib/api';
 
 export interface FlowType {
@@ -86,6 +86,14 @@ interface ListProcessesParams {
   team_id?: string;
   assigned_user_id?: string;
   priority?: string;
+  import_batch_ids?: string;
+}
+
+export interface ProcessSummary {
+  total: number;
+  by_status: Record<string, number>;
+  by_priority: Record<string, number>;
+  stage_groups: Array<{ key: string; count: number; label: string; order: number }>;
 }
 
 export function useProcesses(params: ListProcessesParams = {}) {
@@ -95,6 +103,20 @@ export function useProcesses(params: ListProcessesParams = {}) {
       const { data } = await api.get('/processes', { params });
       return data as { data: Process[]; meta: { total: number; page: number; per_page: number; total_pages: number } };
     },
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useProcessSummary(importBatchIds?: string) {
+  return useQuery({
+    queryKey: ['processes', 'summary', importBatchIds],
+    queryFn: async () => {
+      const { data } = await api.get('/processes/summary', {
+        params: importBatchIds ? { import_batch_ids: importBatchIds } : {},
+      });
+      return data as ProcessSummary;
+    },
+    staleTime: 30_000,
   });
 }
 

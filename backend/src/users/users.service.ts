@@ -8,10 +8,9 @@ import { SupabaseService } from '@/common/supabase/supabase.service';
 import { CreateUserDto, UpdateUserDto, ChangePasswordDto } from './users.dto';
 
 // Roles que só super_admin/admin_pyx podem atribuir
-const PRIVILEGED_ROLES = ['super_admin', 'admin_pyx'];
+const PRIVILEGED_ROLES = ['admin', 'super_admin'];
 
 // Scopes que só super_admin/admin_pyx podem atribuir
-const PRIVILEGED_SCOPES = ['global'];
 
 @Injectable()
 export class UsersService {
@@ -60,7 +59,7 @@ export class UsersService {
 
   async create(dto: CreateUserDto, callerUserId: string) {
     // Validar que o caller pode atribuir a role/scope solicitados
-    await this.validatePrivilegeEscalation(callerUserId, dto.role_name, dto.scope_type);
+    await this.validatePrivilegeEscalation(callerUserId, dto.role_name);
 
     // Criar auth user
     const { data: authData, error: authError } =
@@ -82,10 +81,6 @@ export class UsersService {
         full_name: dto.full_name,
         email: dto.email,
         phone: dto.phone,
-        company_id: dto.company_id,
-        region_id: dto.region_id,
-        branch_id: dto.branch_id,
-        team_id: dto.team_id,
       })
       .select('id')
       .single();
@@ -96,18 +91,14 @@ export class UsersService {
       await this.assignRole(user.id, dto.role_name);
     }
 
-    if (dto.scope_type) {
-      await this.assignScope(user.id, dto.scope_type, dto);
-    }
-
     return { id: user.id };
   }
 
   async update(id: string, dto: UpdateUserDto, callerUserId: string) {
     // Impedir auto-escalation
-    await this.validatePrivilegeEscalation(callerUserId, dto.role_name, dto.scope_type);
+    await this.validatePrivilegeEscalation(callerUserId, dto.role_name);
 
-    const { role_name, scope_type, ...updateFields } = dto;
+    const { role_name, ...updateFields } = dto;
 
     if (Object.keys(updateFields).length > 0) {
       const { error } = await this.supabase.admin
@@ -123,14 +114,6 @@ export class UsersService {
         .delete()
         .eq('user_id', id);
       await this.assignRole(id, role_name);
-    }
-
-    if (scope_type) {
-      await this.supabase.admin
-        .from('access_scopes')
-        .delete()
-        .eq('user_id', id);
-      await this.assignScope(id, scope_type, dto);
     }
 
     return { id };
@@ -190,15 +173,12 @@ export class UsersService {
     return { message: 'Usuário excluído com sucesso' };
   }
 
-  /** Valida que o caller tem permissão para atribuir role/scope privilegiados */
+  /** Valida que o caller tem permissão para atribuir roles privilegiados */
   private async validatePrivilegeEscalation(
     callerUserId: string,
     roleName?: string,
-    scopeType?: string,
   ) {
-    const needsPrivilege =
-      (roleName && PRIVILEGED_ROLES.includes(roleName)) ||
-      (scopeType && PRIVILEGED_SCOPES.includes(scopeType));
+    const needsPrivilege = roleName && PRIVILEGED_ROLES.includes(roleName);
 
     if (!needsPrivilege) return;
 
@@ -217,7 +197,7 @@ export class UsersService {
 
     if (!isPrivileged) {
       throw new ForbiddenException(
-        `Apenas super_admin/admin_pyx podem atribuir role "${roleName}" ou scope "${scopeType}"`,
+        `Apenas admin pode atribuir role "${roleName}"`,
       );
     }
   }

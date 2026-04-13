@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
+import { ImportSourceProvider } from '@/contexts/import-source-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Sidebar } from '@/components/sidebar';
@@ -34,12 +35,14 @@ export default function AuthLayout({
   if (!user) return null;
 
   return (
-    <div className="flex h-screen bg-[rgb(var(--background))]">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+    <ImportSourceProvider>
+      <div className="flex h-screen bg-[rgb(var(--background))]">
+        <Sidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-auto p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </ImportSourceProvider>
   );
 }

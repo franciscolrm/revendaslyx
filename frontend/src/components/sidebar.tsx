@@ -20,6 +20,7 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
+  MessageCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useAuth } from '@/contexts/auth-context';
@@ -60,6 +61,7 @@ const navSections: NavSection[] = [
     items: [
       { href: '/tasks', label: 'Tarefas', icon: CheckSquare },
       { href: '/agenda', label: 'Agenda', icon: Calendar },
+      { href: '/chat', label: 'WhatsApp', icon: MessageCircle },
     ],
   },
   {

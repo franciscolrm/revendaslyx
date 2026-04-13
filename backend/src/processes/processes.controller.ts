@@ -38,6 +38,13 @@ export class ProcessesController {
     return this.processesService.list(user.userId, query);
   }
 
+  @Get('summary')
+  @Permissions({ module: 'processes', action: 'view' })
+  getSummary(@Query('import_batch_ids') importBatchIds?: string) {
+    const ids = importBatchIds ? importBatchIds.split(',').filter(Boolean) : undefined;
+    return this.processesService.getSummary(ids);
+  }
+
   @Get('flow-types')
   @Permissions({ module: 'processes', action: 'view' })
   listFlowTypes() {

@@ -220,6 +220,11 @@ export class ListUnitsQueryDto {
   @IsString()
   search?: string;
 
+  @ApiPropertyOptional({ description: 'Comma-separated import_batch UUIDs' })
+  @IsOptional()
+  @IsString()
+  import_batch_ids?: string;
+
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()
   page?: number;

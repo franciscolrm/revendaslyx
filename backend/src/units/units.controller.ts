@@ -29,6 +29,13 @@ export class UnitsController {
     return this.unitsService.list(query);
   }
 
+  @Get('summary')
+  @Permissions({ module: 'units', action: 'view' })
+  getSummary(@Query('import_batch_ids') importBatchIds?: string) {
+    const ids = importBatchIds ? importBatchIds.split(',').filter(Boolean) : undefined;
+    return this.unitsService.getSummary(ids);
+  }
+
   @Get(':id')
   @Permissions({ module: 'units', action: 'view' })
   findById(@Param('id') id: string) {

@@ -32,7 +32,8 @@ export class ResalesService {
         status:resale_statuses(code, name, stage_group),
         branch:branches(name),
         team:teams(name),
-        assigned_user:users!resales_assigned_user_id_fkey(full_name)
+        assigned_user:users!resales_assigned_user_id_fkey(full_name),
+        client:clients(id, full_name, document_number, phone)
       `,
         { count: 'exact' },
       )
@@ -94,6 +95,7 @@ export class ResalesService {
         branch:branches(name),
         team:teams(name),
         assigned_user:users!resales_assigned_user_id_fkey(full_name, email),
+        client:clients(id, full_name, document_number, phone, email, client_type),
         status_history:resale_status_history(
           id, changed_at, notes,
           status:resale_statuses(code, name),

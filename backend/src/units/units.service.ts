@@ -21,7 +21,10 @@ export class UnitsService {
       .select(
         `
         *,
-        enterprise:enterprises(id, name, code)
+        enterprise:enterprises(id, name, code),
+        original_client:clients!units_original_client_id_fkey(id, full_name, phone),
+        current_client:clients!units_current_client_id_fkey(id, full_name, phone),
+        import_batch:import_batches(id, source_name, created_at)
       `,
         { count: 'exact' },
       )
@@ -36,6 +39,10 @@ export class UnitsService {
     }
     if (query.stock_available === 'true') {
       qb = qb.eq('stock_available', true);
+    }
+    if (query.import_batch_ids) {
+      const ids = query.import_batch_ids.split(',').filter(Boolean);
+      if (ids.length > 0) qb = qb.in('import_batch_id', ids);
     }
     if (query.search) {
       const sanitized = query.search.replace(/[%_\\,().*]/g, '');
@@ -58,6 +65,55 @@ export class UnitsService {
         total_pages: Math.ceil((count ?? 0) / perPage),
       },
     };
+  }
+
+  async getSummary(importBatchIds?: string[]) {
+    try {
+      let qb = this.supabase.admin.from('units').select('id, status, stock_available, current_value, debts_cadin, debts_iptu, debts_condominio, debts_other, import_batch_id');
+      if (importBatchIds?.length) {
+        qb = qb.in('import_batch_id', importBatchIds);
+      }
+      const { data, error } = await qb;
+      if (error) throw error;
+
+      const units = data ?? [];
+      const byStatus: Record<string, number> = {};
+      let withDebts = 0;
+      let totalValue = 0;
+
+      for (const u of units) {
+        byStatus[u.status] = (byStatus[u.status] || 0) + 1;
+        totalValue += Number(u.current_value) || 0;
+        if ((Number(u.debts_cadin) || 0) > 0 || (Number(u.debts_iptu) || 0) > 0 ||
+            (Number(u.debts_condominio) || 0) > 0 || (Number(u.debts_other) || 0) > 0) {
+          withDebts++;
+        }
+      }
+
+      // By source
+      const batchIds = [...new Set(units.map(u => u.import_batch_id).filter(Boolean))];
+      const sourceMap: Record<string, number> = {};
+      if (batchIds.length > 0) {
+        const { data: batches } = await this.supabase.admin
+          .from('import_batches').select('id, source_name').in('id', batchIds);
+        const nameMap = Object.fromEntries((batches ?? []).map(b => [b.id, b.source_name ?? 'Desconhecido']));
+        for (const u of units) {
+          const src = nameMap[u.import_batch_id] ?? 'Manual';
+          sourceMap[src] = (sourceMap[src] || 0) + 1;
+        }
+      }
+
+      return {
+        total: units.length,
+        by_status: byStatus,
+        in_stock: units.filter(u => u.stock_available).length,
+        with_debts: withDebts,
+        total_value: totalValue,
+        by_source: Object.entries(sourceMap).map(([name, count]) => ({ name, count })),
+      };
+    } catch {
+      return { total: 0, by_status: {}, in_stock: 0, with_debts: 0, total_value: 0, by_source: [] };
+    }
   }
 
   async findById(id: string) {

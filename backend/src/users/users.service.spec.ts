@@ -69,7 +69,7 @@ describe('UsersService — Privilege Escalation Prevention', () => {
             email: 'new@test.com',
             password: '12345678',
             full_name: 'Test',
-            scope_type: 'global',
+            role_name: 'admin',
           },
           'caller-id',
         ),

@@ -7,7 +7,8 @@ describe('ImportsService — Input Validation', () => {
 
   beforeEach(() => {
     const mockSupabase = { admin: { from: jest.fn(), storage: { from: jest.fn() } } };
-    service = new ImportsService(mockSupabase as any);
+    const mockProcessor = {} as any;
+    service = new ImportsService(mockSupabase as any, mockProcessor);
   });
 
   describe('parseFile (via private method reflection)', () => {

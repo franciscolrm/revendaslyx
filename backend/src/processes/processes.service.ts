@@ -30,14 +30,14 @@ export class ProcessesService {
         `
         *,
         flow_type:resale_flow_types(id, name, code),
-        current_stage:flow_stages!resale_processes_current_stage_id_fkey(id, name, stage_group, stage_order),
-        seller_client:clients!resale_processes_seller_client_id_fkey(id, full_name, document_number),
-        buyer_client:clients!resale_processes_buyer_client_id_fkey(id, full_name, document_number),
-        unit:units(id, unit_number, block_tower),
-        enterprise:enterprises(id, name),
+        current_stage:flow_stages!resale_processes_current_stage_id_fkey(id, name, stage_group, stage_order, sla_days),
+        seller_client:clients!resale_processes_seller_client_id_fkey(id, full_name, document_number, phone, email),
+        buyer_client:clients!resale_processes_buyer_client_id_fkey(id, full_name, document_number, phone, email),
+        unit:units(id, unit_number, block_tower, current_value, status, enterprise:enterprises(id, name, code)),
         branch:branches(name),
         team:teams(name),
-        assigned_user:users!resale_processes_assigned_user_id_fkey(full_name)
+        assigned_user:users!resale_processes_assigned_user_id_fkey(full_name),
+        import_batch:import_batches(id, source_name, created_at)
       `,
         { count: 'exact' },
       )
@@ -50,6 +50,21 @@ export class ProcessesService {
     if (query.flow_type_id) {
       qb = qb.eq('flow_type_id', query.flow_type_id);
     }
+    if (query.stage_group) {
+      // Supabase doesn't support filtering on nested relation fields reliably.
+      // First get the stage IDs matching the stage_group, then filter by those.
+      const { data: matchingStages } = await this.supabase.admin
+        .from('flow_stages')
+        .select('id')
+        .eq('stage_group', query.stage_group);
+      const stageIds = (matchingStages ?? []).map((s) => s.id);
+      if (stageIds.length > 0) {
+        qb = qb.in('current_stage_id', stageIds);
+      } else {
+        // No stages match this group — return empty
+        qb = qb.eq('current_stage_id', '00000000-0000-0000-0000-000000000000');
+      }
+    }
     if (query.branch_id) {
       qb = qb.eq('branch_id', query.branch_id);
     }
@@ -61,6 +76,10 @@ export class ProcessesService {
     }
     if (query.priority) {
       qb = qb.eq('priority', query.priority);
+    }
+    if (query.import_batch_ids) {
+      const ids = query.import_batch_ids.split(',').filter(Boolean);
+      if (ids.length > 0) qb = qb.in('import_batch_id', ids);
     }
     if (query.search) {
       const sanitized = query.search.replace(/[%_\\,().*]/g, '');
@@ -93,8 +112,7 @@ export class ProcessesService {
         current_stage:flow_stages!resale_processes_current_stage_id_fkey(id, name, stage_group, stage_order, sla_days, requires_documents, requires_tasks, checklist),
         seller_client:clients!resale_processes_seller_client_id_fkey(id, full_name, document_number, email, phone),
         buyer_client:clients!resale_processes_buyer_client_id_fkey(id, full_name, document_number, email, phone),
-        unit:units(id, unit_number, block_tower, unit_type, status, current_value),
-        enterprise:enterprises(id, name, code),
+        unit:units(id, unit_number, block_tower, unit_type, status, current_value, enterprise:enterprises(id, name, code)),
         branch:branches(name),
         team:teams(name),
         assigned_user:users!resale_processes_assigned_user_id_fkey(full_name, email),
@@ -301,6 +319,66 @@ export class ProcessesService {
     });
 
     return timeline;
+  }
+
+  async getSummary(importBatchIds?: string[]) {
+    try {
+      let qb = this.supabase.admin
+        .from('resale_processes')
+        .select(`
+          id, status, priority,
+          current_stage:flow_stages!resale_processes_current_stage_id_fkey(name, stage_group, stage_order)
+        `);
+
+      if (importBatchIds?.length) {
+        qb = qb.in('import_batch_id', importBatchIds);
+      }
+
+      const { data, error } = await qb;
+      if (error) throw error;
+
+      const processes = data ?? [];
+
+      // Counts by status
+      const byStatus: Record<string, number> = {};
+      const byPriority: Record<string, number> = {};
+      const byStageGroup: Record<string, { count: number; label: string; order: number }> = {};
+
+      for (const p of processes) {
+        byStatus[p.status] = (byStatus[p.status] || 0) + 1;
+        byPriority[p.priority] = (byPriority[p.priority] || 0) + 1;
+
+        const stage = p.current_stage as any;
+        if (stage?.stage_group) {
+          if (!byStageGroup[stage.stage_group]) {
+            byStageGroup[stage.stage_group] = {
+              count: 0,
+              label: stage.name ?? stage.stage_group,
+              order: stage.stage_order ?? 99,
+            };
+          }
+          byStageGroup[stage.stage_group].count++;
+        }
+      }
+
+      const stageGroups = Object.entries(byStageGroup)
+        .map(([key, val]) => ({ key, ...val }))
+        .sort((a, b) => a.order - b.order);
+
+      return {
+        total: processes.length,
+        by_status: byStatus,
+        by_priority: byPriority,
+        stage_groups: stageGroups,
+      };
+    } catch (err: any) {
+      return {
+        total: 0,
+        by_status: {},
+        by_priority: {},
+        stage_groups: [],
+      };
+    }
   }
 
   async listFlowTypes() {

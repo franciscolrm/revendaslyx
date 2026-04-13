@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FinancialService } from './financial.service';
 import { UpsertFinancialValueDto } from './financial.dto';
@@ -38,10 +38,24 @@ export class FinancialController {
     return this.financialService.upsertValue(dto, user.userId);
   }
 
+  @Get('process/:processId/entries')
+  @Permissions({ module: 'financial', action: 'view' })
+  getProcessEntries(@Param('processId') processId: string) {
+    return this.financialService.getProcessEntries(processId);
+  }
+
+  @Get('full-summary')
+  @Permissions({ module: 'financial', action: 'view' })
+  getFullSummary(@Query('import_batch_ids') importBatchIds?: string) {
+    const batchIds = importBatchIds ? importBatchIds.split(',').filter(Boolean) : undefined;
+    return this.financialService.getFullSummary(batchIds);
+  }
+
   @Get('summary')
   @Permissions({ module: 'financial', action: 'view' })
-  getSummary() {
-    return this.financialService.getSummary();
+  getSummary(@Query('import_batch_ids') importBatchIds?: string) {
+    const batchIds = importBatchIds ? importBatchIds.split(',').filter(Boolean) : undefined;
+    return this.financialService.getSummary(batchIds);
   }
 
   @Get('summary/by-branch')

@@ -37,6 +37,13 @@ export class ClientsController {
     return this.clientsService.list(query);
   }
 
+  @Get('summary')
+  @Permissions({ module: 'clients', action: 'view' })
+  getSummary(@Query('import_batch_ids') importBatchIds?: string) {
+    const ids = importBatchIds ? importBatchIds.split(',').filter(Boolean) : undefined;
+    return this.clientsService.getSummary(ids);
+  }
+
   @Get(':id')
   @Permissions({ module: 'clients', action: 'view' })
   findById(@Param('id') id: string) {

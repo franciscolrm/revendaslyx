@@ -3,27 +3,13 @@
 import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useUpdateUser, useChangePassword } from '@/hooks/use-users';
-import {
-  useCompanies,
-  useRegions,
-  useBranches,
-  useTeams,
-  useRoles,
-} from '@/hooks/use-org';
+import { useRoles } from '@/hooks/use-org';
 import { FormField, Input, Select } from '@/components/form-field';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Building2, Shield, Lock } from 'lucide-react';
-
-const scopeOptions = [
-  { value: 'own', label: 'Próprio (own)' },
-  { value: 'team', label: 'Equipe (team)' },
-  { value: 'branch', label: 'Filial (branch)' },
-  { value: 'region', label: 'Região (region)' },
-  { value: 'global', label: 'Global' },
-];
+import { User, Shield, Lock } from 'lucide-react';
 
 const statusOptions = [
   { value: 'active', label: 'Ativo' },
@@ -46,22 +32,13 @@ export default function EditUserPage({
     full_name: '',
     phone: '',
     status: '',
-    company_id: '',
-    region_id: '',
-    branch_id: '',
-    team_id: '',
     role_name: '',
-    scope_type: '',
   });
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
   const [passwordMsg, setPasswordMsg] = useState('');
   const [loaded, setLoaded] = useState(false);
 
-  const { data: companies } = useCompanies();
-  const { data: regions } = useRegions(form.company_id || undefined);
-  const { data: branches } = useBranches(form.region_id || undefined);
-  const { data: teams } = useTeams(form.branch_id || undefined);
   const { data: roles } = useRoles();
 
   useEffect(() => {
@@ -70,38 +47,17 @@ export default function EditUserPage({
         full_name: user.full_name || '',
         phone: user.phone || '',
         status: user.status || 'active',
-        company_id: user.company?.id || '',
-        region_id: user.region?.id || '',
-        branch_id: user.branch?.id || '',
-        team_id: user.team?.id || '',
         role_name:
           user.user_roles
             ?.map((ur: any) => ur.role?.name)
             .filter(Boolean)[0] || '',
-        scope_type:
-          user.access_scopes?.map((s: any) => s.scope_type)[0] || '',
       });
       setLoaded(true);
     }
   }, [user, loaded]);
 
   function set(field: string, value: string) {
-    setForm((prev) => {
-      const next = { ...prev, [field]: value };
-      if (field === 'company_id') {
-        next.region_id = '';
-        next.branch_id = '';
-        next.team_id = '';
-      }
-      if (field === 'region_id') {
-        next.branch_id = '';
-        next.team_id = '';
-      }
-      if (field === 'branch_id') {
-        next.team_id = '';
-      }
-      return next;
-    });
+    setForm((prev) => ({ ...prev, [field]: value }));
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -211,71 +167,6 @@ export default function EditUserPage({
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-gray-400" />
-              <h2 className="font-semibold text-gray-900">Lotação</h2>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Empresa">
-                <Select
-                  value={form.company_id}
-                  onChange={(e) => set('company_id', e.target.value)}
-                  placeholder="Selecione..."
-                  options={
-                    companies?.map((c: any) => ({
-                      value: c.id,
-                      label: c.name,
-                    })) ?? []
-                  }
-                />
-              </FormField>
-              <FormField label="Região">
-                <Select
-                  value={form.region_id}
-                  onChange={(e) => set('region_id', e.target.value)}
-                  placeholder="Selecione..."
-                  options={
-                    regions?.map((r: any) => ({
-                      value: r.id,
-                      label: r.name,
-                    })) ?? []
-                  }
-                />
-              </FormField>
-              <FormField label="Filial">
-                <Select
-                  value={form.branch_id}
-                  onChange={(e) => set('branch_id', e.target.value)}
-                  placeholder="Selecione..."
-                  options={
-                    branches?.map((b: any) => ({
-                      value: b.id,
-                      label: b.name,
-                    })) ?? []
-                  }
-                />
-              </FormField>
-              <FormField label="Equipe">
-                <Select
-                  value={form.team_id}
-                  onChange={(e) => set('team_id', e.target.value)}
-                  placeholder="Selecione..."
-                  options={
-                    teams?.map((t: any) => ({
-                      value: t.id,
-                      label: t.name,
-                    })) ?? []
-                  }
-                />
-              </FormField>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-gray-400" />
               <h2 className="font-semibold text-gray-900">Perfil e Acesso</h2>
             </div>
@@ -293,14 +184,6 @@ export default function EditUserPage({
                       label: r.name,
                     })) ?? []
                   }
-                />
-              </FormField>
-              <FormField label="Escopo de Acesso">
-                <Select
-                  value={form.scope_type}
-                  onChange={(e) => set('scope_type', e.target.value)}
-                  placeholder="Selecione..."
-                  options={scopeOptions}
                 />
               </FormField>
             </div>
@@ -323,7 +206,6 @@ export default function EditUserPage({
         </div>
       </form>
 
-      {/* Troca de senha */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">

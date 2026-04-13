@@ -56,8 +56,6 @@ export default function UserDetailPage({
       .filter(Boolean)
       .join(', ') || '-';
 
-  const scopeType =
-    user.access_scopes?.map((s: any) => s.scope_type).join(', ') || '-';
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -110,27 +108,11 @@ export default function UserDetailPage({
 
       <Card>
         <CardHeader>
-          <h2 className="font-semibold text-gray-900">Lotação</h2>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid gap-5 sm:grid-cols-2">
-            <Field label="Empresa" value={user.company?.name} />
-            <Field label="Região" value={user.region?.name} />
-            <Field label="Filial" value={user.branch?.name} />
-            <Field label="Equipe" value={user.team?.name} />
-            <Field label="Gestor" value={user.manager?.full_name} />
-          </dl>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <h2 className="font-semibold text-gray-900">Perfil e Acesso</h2>
         </CardHeader>
         <CardContent>
           <dl className="grid gap-5 sm:grid-cols-2">
             <Field label="Perfil (Role)" value={roleName} />
-            <Field label="Escopo de Acesso" value={scopeType} />
           </dl>
         </CardContent>
       </Card>

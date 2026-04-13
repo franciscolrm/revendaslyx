@@ -56,9 +56,6 @@ export default function UsersPage() {
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-gray-500">
                   <th className="px-6 py-3 font-medium">Usuário</th>
-                  <th className="px-6 py-3 font-medium">Empresa</th>
-                  <th className="px-6 py-3 font-medium">Filial</th>
-                  <th className="px-6 py-3 font-medium">Equipe</th>
                   <th className="px-6 py-3 font-medium">Perfil</th>
                   <th className="px-6 py-3 font-medium">Status</th>
                   <th className="px-6 py-3 font-medium text-right">Ações</th>
@@ -85,15 +82,6 @@ export default function UsersPage() {
                           </p>
                         </div>
                       </Link>
-                    </td>
-                    <td className="px-6 py-4 text-gray-500">
-                      {u.company?.name ?? '-'}
-                    </td>
-                    <td className="px-6 py-4 text-gray-500">
-                      {u.branch?.name ?? '-'}
-                    </td>
-                    <td className="px-6 py-4 text-gray-500">
-                      {u.team?.name ?? '-'}
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant="purple">

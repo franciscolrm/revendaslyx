@@ -25,6 +25,7 @@ const ALLOWED_MIMETYPES = [
   'application/json',
   'text/plain',
   'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ];
 
 @ApiTags('Imports')
@@ -32,6 +33,12 @@ const ALLOWED_MIMETYPES = [
 @Controller('imports')
 export class ImportsController {
   constructor(private importsService: ImportsService) {}
+
+  @Get('sources')
+  @Permissions({ module: 'imports', action: 'view' })
+  listSources() {
+    return this.importsService.listSources();
+  }
 
   @Get('batches')
   @Permissions({ module: 'imports', action: 'view' })
@@ -68,8 +75,8 @@ export class ImportsController {
     if (file.size > MAX_FILE_SIZE) throw new BadRequestException('Arquivo excede 10 MB');
 
     const isAllowed =
-      ALLOWED_MIMETYPES.includes(file.mimetype) || /\.(csv|json)$/i.test(file.originalname);
-    if (!isAllowed) throw new BadRequestException('Use CSV ou JSON.');
+      ALLOWED_MIMETYPES.includes(file.mimetype) || /\.(csv|json|xlsx?)$/i.test(file.originalname);
+    if (!isAllowed) throw new BadRequestException('Use CSV, JSON ou XLSX.');
 
     return this.importsService.uploadAndProcess(file, user.userId, sourceId, importType);
   }
@@ -78,6 +85,21 @@ export class ImportsController {
   @Permissions({ module: 'imports', action: 'view' })
   getFinancialItems(@Query('import_batch_id') importBatchId?: string) {
     return this.importsService.getFinancialItems(importBatchId);
+  }
+
+  @Get('batches/:id/status')
+  @Permissions({ module: 'imports', action: 'view' })
+  getBatchStatus(@Param('id') id: string) {
+    return this.importsService.getBatchStatus(id);
+  }
+
+  @Get('batches/:id/items')
+  @Permissions({ module: 'imports', action: 'view' })
+  getBatchItems(
+    @Param('id') id: string,
+    @Query('status') status?: string,
+  ) {
+    return this.importsService.getBatchItems(id, status);
   }
 
   @Post('batches/:id/process')
@@ -90,5 +112,17 @@ export class ImportsController {
   @Permissions({ module: 'imports', action: 'upload' })
   deleteBatch(@Param('id') id: string) {
     return this.importsService.deleteBatch(id);
+  }
+
+  @Get('migrate-to-crm/preview')
+  @Permissions({ module: 'imports', action: 'view' })
+  previewMigration() {
+    return this.importsService.previewMigration();
+  }
+
+  @Post('migrate-to-crm')
+  @Permissions({ module: 'imports', action: 'upload' })
+  migrateResalesToCrm(@Query('force') force?: string) {
+    return this.importsService.migrateResalesToCrm(force === 'true');
   }
 }
