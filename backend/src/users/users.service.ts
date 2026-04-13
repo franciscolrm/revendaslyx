@@ -58,10 +58,10 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto, callerUserId: string) {
-    // Validar que o caller pode atribuir a role/scope solicitados
+    // Validar que o caller pode atribuir roles privilegiados
     await this.validatePrivilegeEscalation(callerUserId, dto.role_name);
 
-    // Criar auth user
+    // Criar auth user no Supabase Auth
     const { data: authData, error: authError } =
       await this.supabase.admin.auth.admin.createUser({
         email: dto.email,
@@ -70,10 +70,14 @@ export class UsersService {
       });
 
     if (authError) {
-      throw new BadRequestException(`Erro ao criar auth: ${authError.message}`);
+      throw new BadRequestException(
+        authError.message?.includes('already been registered')
+          ? 'Este e-mail já está cadastrado no sistema'
+          : `Erro ao criar autenticação: ${authError.message}`,
+      );
     }
 
-    // Criar app user
+    // Criar registro na tabela users
     const { data: user, error: userError } = await this.supabase.admin
       .from('users')
       .insert({
@@ -85,8 +89,13 @@ export class UsersService {
       .select('id')
       .single();
 
-    if (userError) throw userError;
+    if (userError) {
+      // Rollback: remover auth user órfão se o insert na tabela falhar
+      await this.supabase.admin.auth.admin.deleteUser(authData.user.id);
+      throw new BadRequestException(`Erro ao criar usuário: ${userError.message}`);
+    }
 
+    // Atribuir role
     if (dto.role_name) {
       await this.assignRole(user.id, dto.role_name);
     }
