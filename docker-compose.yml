@@ -1,16 +1,22 @@
 services:
+  # ── Backend (NestJS) ──
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     environment:
       - PORT=3001
+      - NODE_ENV=production
       - SUPABASE_URL=https://supabase-revendas.lyxai.com.br
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - CORS_ORIGINS=https://revendas.lyxai.com.br,http://localhost:3000
+      - EVOLUTION_API_URL=http://evolution-api:8080
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-LYX-EVOLUTION-API-KEY-2026}
     expose:
       - "3001"
+    networks:
+      - app-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api"]
@@ -18,6 +24,7 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Frontend (Next.js) ──
   frontend:
     build:
       context: ./frontend
@@ -30,7 +37,40 @@ services:
       - NEXT_PUBLIC_SUPABASE_URL=https://supabase-revendas.lyxai.com.br
     expose:
       - "3000"
+    networks:
+      - app-network
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
+
+  # ── Evolution API (WhatsApp) ──
+  evolution-api:
+    container_name: evolution-api
+    image: atendai/evolution-api:v2.2.3
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+    environment:
+      - SERVER_URL=https://evolution.lyxai.com.br
+      - SERVER_TYPE=http
+      - SERVER_PORT=8080
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:-LYX-EVOLUTION-API-KEY-2026}
+      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=${EVOLUTION_DB_URI:-postgresql://postgres:password@host.docker.internal:55432/postgres}
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution
+      - DEL_INSTANCE=false
+      - DEL_TEMP_INSTANCES=true
+      - QRCODE_LIMIT=30
+      - WEBHOOK_GLOBAL_URL=https://revendas.lyxai.com.br/api/integrations/whatsapp/webhook
+      - WEBHOOK_GLOBAL_ENABLED=true
+      - WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=true
+      - WEBHOOK_EVENTS_MESSAGES_UPSERT=true
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
